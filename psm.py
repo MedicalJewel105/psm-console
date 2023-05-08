@@ -7,8 +7,7 @@ import pickle
 
 
 def main() -> None:
-    with open('psm_version.txt', 'r') as f:
-        psm_version = f.readline()
+    PSM_VERSION = '1.0.0'
     global pf_path
     pf_path = 'data.bin'
     global db_path
@@ -22,7 +21,7 @@ def main() -> None:
 
     command = ''
     os.system('cls')
-    print(f'PSM version {psm_version}')
+    print(f'PSM version {PSM_VERSION}')
     while True:
         print('Commands: help, show [int], search [str] [int], new, edit, delete, export, chpassword, exit.')
         command = input('> ')
@@ -165,7 +164,7 @@ def log_in() -> None:
     password = get_password()
     input_password = input('Enter password: ')
     while input_password != password:
-        input_password = input()
+        input_password = input('Enter password: ')
 
 
 def change_password() -> None:
