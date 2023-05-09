@@ -76,6 +76,8 @@ class Database:
         """Generate valid id for element."""
         # fetch already existing ones
         ids = self.ids()
+        if not ids:
+            return 0
         # fill holes
         if min(ids) > 0: # if ... x1, x2, x3 indexes exist
             return min(ids) -1

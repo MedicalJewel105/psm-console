@@ -1,4 +1,4 @@
-# PSM - Password manager (console)
+# PSM - Password Manager (console)
 
 Store your passwords in more convenient way. All passwords are stored on your device? you can export them as MS Excel table.
 
