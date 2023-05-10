@@ -10,6 +10,5 @@ Make sure to install dependencies:
 # Launch
 
 ```
-cd ...
-python psm.py
+python <path>/psm.py
 ```

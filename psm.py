@@ -23,8 +23,8 @@ def main() -> None:
     os.system('cls')
     print(f'PSM version {PSM_VERSION}')
     while True:
-        print('Commands: help, show [int], search [str] [int], new, edit, delete, export, chpassword, exit.')
-        command = input('> ')
+        print('Commands: help, show [int], search [str] [int], new, edit, delete, export, chpassword, save, exit.')
+        command = input('> ').lower().strip()
         os.system('cls')
         print(f'> {command}')
         if command == 'help':
@@ -76,6 +76,10 @@ def main() -> None:
             change_password()
             print('Password changed!')
             print()
+        elif command == 'save':
+            database.save()
+            print('Database saved!')
+            print()
         elif command == 'exit':
             break
         else:
@@ -108,6 +112,9 @@ def help_function() -> None:
     # chpassword
     print('\033[31mchpassword\033[0m')
     print('Change password to enter this app. Usage: chpassword.')
+    # save
+    print('\033[31msave\033[0m')
+    print('Save database. Usage: save.')
     # exit
     print('\033[31mexit\033[0m')
     print('ALWAYS run this command when you want to exit an app, otherwise database won\'t be updated. Usage: exit.')
@@ -211,7 +218,12 @@ def search_db(cmd: str) -> None:
 def find_number(s: str) -> int:
     """Find number in a string."""
     if bool(re.search(r'\d', s)):  # digit in s
-        return int(s.split()[1])
+        try:
+            number =  int(s.split()[1])
+        except ValueError:
+            return 2
+        if number < 1:
+            return 2
     else:
         return 2
 
@@ -311,7 +323,9 @@ def print_db(command: str, psize: int = 2) -> None:
         if number % psize == 0:
             current_page += 1
             if number != len(database.data_cells):
-                input('...')
+                n = input('...')
+                if input.lower() == 'x': # Cancel viewing DB
+                    return
                 os.system('cls')
                 print(f'> {command}')
     print()
@@ -324,4 +338,8 @@ def export_data(output_path: str) -> None:
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        print('Warning!')
+        print(e)

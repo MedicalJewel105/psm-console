@@ -1,0 +1,2 @@
+generate password via tab
+search not work e.g: discord
