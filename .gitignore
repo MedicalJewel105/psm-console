@@ -1,6 +1,7 @@
 /__pycache__
 /data
-/data.bin
+/data.dat
+/key.dat
 /psm.bat
 /build
 /dist

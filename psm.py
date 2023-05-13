@@ -3,7 +3,7 @@ from os import path
 import pandas
 from database import Database, DataCell
 import re
-import pickle
+from cryptography.fernet import Fernet
 from random import choice
 import string
 
@@ -11,7 +11,9 @@ import string
 def main() -> None:
     PSM_VERSION = '1.0.1'
     global PF_PATH
-    PF_PATH = 'data.bin'
+    PF_PATH = 'data.dat'
+    global KEY_PATH
+    KEY_PATH = 'key.dat'
     global DB_PATH
     DB_PATH = path.join('data', 'database.json')
     os.chdir(path.dirname(path.realpath(__file__)))
@@ -89,6 +91,7 @@ def main() -> None:
             print()
 
     database.save()
+    save_password(load_password()) # update encryption
 
 
 def help_function() -> None:
@@ -142,7 +145,7 @@ def init() -> None:
 
 def check_for_data() -> None:
     """Check if there are any passwords, if not - init()."""
-    if path.exists(PF_PATH) and path.exists(DB_PATH):
+    if path.exists(PF_PATH) and path.exists(KEY_PATH) and path.exists(DB_PATH):
         p = load_password()
         if not p:
             init()
@@ -151,22 +154,24 @@ def check_for_data() -> None:
 
 
 def load_password() -> str:
-    """Read and encode password from file."""
-    pf = open(PF_PATH, 'rb')
-    try:
-        p = pickle.load(pf)
-        pf.close()
-        return p
-    except EOFError:
-        pf.close()
-        save_password('')
-        return ''
+    """Load and encode password from data.dat."""
+    with open(KEY_PATH, "rb") as file:
+        key = file.readline()
+    cipher = Fernet(key)
+    with open(PF_PATH, "rb") as file:
+        encrypted_data = file.readline()
+    return cipher.decrypt(encrypted_data).decode()
 
 
 def save_password(x: str) -> None:
-    """Encode and save password to file."""
-    with open(PF_PATH, 'wb') as pf:
-        pickle.dump(x, pf)
+    """Encode and save password to data.dat."""
+    key = Fernet.generate_key()
+    cipher = Fernet(key)
+    encrypted_data = cipher.encrypt(x.encode())
+    with open(PF_PATH, "wb") as file:
+        file.write(encrypted_data)
+    with open(KEY_PATH, "wb") as file:
+        file.write(key)
 
 
 def log_in() -> None:
