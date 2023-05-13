@@ -108,19 +108,23 @@ class Database:
             if i.id == id:
                 return i
     
-    def search_db(self, q: str, n: int) -> list:
-        """Search DB for matching things. Returns list with at least `n` DataCell's."""
+    def search_db(self, q: str, x: float=0.8) -> list:
+        """Search DB for matching things. x - indicator of similarity. Returns list with DataCells."""
         result = []
+        q = q.lower()
         temp = deepcopy(self.data_cells)
-        names = [i.name for i in self.data_cells]
-        links = [i.link for i in self.data_cells]
-        logins = [i.login for i in self.data_cells]
-        passwords = [i.password for i in self.data_cells]
-        other_datas = [i.other_data for i in self.data_cells]
-        codes_paths = [i.codes for i in self.data_cells]
+        names = [i.name.lower() for i in temp]
+        links = [i.link.lower() for i in temp]
+        logins = [i.login.lower() for i in temp]
+        passwords = [i.password.lower() for i in temp]
+        other_datas = [i.other_data.lower() for i in temp]
+        codes_paths = [i.codes.lower() for i in temp]
         everything = names + links + logins + passwords + other_datas + codes_paths
-        match_result = difflib.get_close_matches(q, everything, n=n)
+        match_result = difflib.get_close_matches(q, everything, cutoff=x)
         for i in temp:
-            if i.name or i.link or i.login or i.password or i.other_data or i.codes in match_result:
+            if (i.name.lower() or i.link.lower() or i.login.lower() or i.password.lower() or i.other_data.lower() or i.codes.lower()) in match_result:
                 result.append(i)
         return result
+
+if __name__ == '__main__':
+    print("The database library file cannot be started.")

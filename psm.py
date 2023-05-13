@@ -4,14 +4,16 @@ import pandas
 from database import Database, DataCell
 import re
 import pickle
+from random import choice
+import string
 
 
 def main() -> None:
-    PSM_VERSION = '1.0.0'
-    global pf_path
-    pf_path = 'data.bin'
-    global db_path
-    db_path = path.join('data', 'database.json')
+    PSM_VERSION = '1.0.1'
+    global PF_PATH
+    PF_PATH = 'data.bin'
+    global DB_PATH
+    DB_PATH = path.join('data', 'database.json')
     os.chdir(path.dirname(path.realpath(__file__)))
     check_for_data()
     log_in()
@@ -21,9 +23,10 @@ def main() -> None:
 
     command = ''
     os.system('cls')
+    os.system('cls')
     print(f'PSM version {PSM_VERSION}')
     while True:
-        print('Commands: help, show [int], search [str] [int], new, edit, delete, export, chpassword, save, exit.')
+        print('Commands: help, show [int], search [str] [float], new, edit, delete, export, chpassword, save, exit.')
         command = input('> ').lower().strip()
         os.system('cls')
         print(f'> {command}')
@@ -31,7 +34,7 @@ def main() -> None:
             help_function()
             print()
         elif command.startswith('show'):
-            number = find_number(command)
+            number = parse_int(command)
             print_db(command, number)
         elif command == 'new':
             print('Creating new data cell.')
@@ -62,10 +65,9 @@ def main() -> None:
             print()
         elif command == 'export':
             print('Exporting data.')
-            savepath, is_cancelled = enter_path()
+            savedir, is_cancelled = enter_dir()
             if not is_cancelled:
-                export_data(savepath)
-                print('Exported!')
+                export_data(savedir)
             else:
                 print('Cancelled.')
             print()
@@ -96,10 +98,11 @@ def help_function() -> None:
     print('Show database content. Usage: show [i: int], i - how many results to show at one time.')
     # search
     print('\033[31msearch\033[0m')
-    print('Search in database by word. Usage: search [query: str] [i: int], query - what to search for, i - how many results to show.')
+    print('Search in database by word. Usage: search [query: str] [i: float], query - what to search for, i - indicator of similarity.')
     # new
     print('\033[31mnew\033[0m')
     print('Create new data cell with information. Usage: new.')
+    print('Note: you can press do "Tab <n: int>" when filling in password field. This will create a good password of n signs.')
     # edit
     print('\033[31medit\033[0m')
     print('Edit data cell (cell is defined by ID). Usage: edit.')
@@ -130,26 +133,26 @@ def init() -> None:
             print('Password field can\'t be empty.')
     save_password(new)
     # do not create new file if there is already one (might be with password)
-    if not path.exists(db_path):
+    if not path.exists(DB_PATH):
         if not path.exists('data'):
             os.mkdir('data')
-        with open(db_path, 'w') as db_file:
+        with open(DB_PATH, 'w') as db_file:
             db_file.write('[]')
 
 
 def check_for_data() -> None:
     """Check if there are any passwords, if not - init()."""
-    if path.exists(pf_path) and path.exists(db_path):
-        p = get_password()
+    if path.exists(PF_PATH) and path.exists(DB_PATH):
+        p = load_password()
         if not p:
             init()
     else:
         init()
 
 
-def get_password() -> str:
+def load_password() -> str:
     """Read and encode password from file."""
-    pf = open(pf_path, 'rb')
+    pf = open(PF_PATH, 'rb')
     try:
         p = pickle.load(pf)
         pf.close()
@@ -162,13 +165,13 @@ def get_password() -> str:
 
 def save_password(x: str) -> None:
     """Encode and save password to file."""
-    with open(pf_path, 'wb') as pf:
+    with open(PF_PATH, 'wb') as pf:
         pickle.dump(x, pf)
 
 
 def log_in() -> None:
     """Enter a password to open an app."""
-    password = get_password()
+    password = load_password()
     input_password = input('Enter password: ')
     while input_password != password:
         input_password = input('Enter password: ')
@@ -177,7 +180,7 @@ def log_in() -> None:
 def change_password() -> None:
     """Update password of the app."""
     print('Changing app password.')
-    password = get_password()
+    password = load_password()
     p = input('Enter old password: ')
     if p != password:
         return
@@ -197,38 +200,27 @@ def search_db(cmd: str) -> None:
     if len(cwords) == 1:
         print('Incorrect usage.')
         return
-    if len(cwords) > 2 and cwords[-1].isnumeric():  # search q ... 7
+    if len(cwords) > 2 and cwords[-1].isnumeric():  # search q ... 0.5
         query = ' '.join(cwords[1:-1])
-        n = int(cwords[-1])
+        i = float(cwords[-1])
     elif len(cwords) > 2:  # search q ... q
         query = ' '.join(cwords[1:])
-        n = 3
+        i = 0.8
     else:  # search q
         query = cwords[1]
-        n = 3
-    if n == 0:
-        print('Incorrect usage.')
+        i = 0.8
+    if i == 0:
+        print('Incorrect value of i.')
         return
-    search_results = database.search_db(query, n)
-    print(f'Searching for {query}')
-    for i in search_results[:n]:
-        print_cell(i, True)
+
+    print(f'Searching for {query}.')
+    search_results = database.search_db(query, i)
+    print(f'Found {len(search_results)} matches.')
+    for cell in search_results:
+        print_cell(cell, True)
 
 
-def find_number(s: str) -> int:
-    """Find number in a string."""
-    if bool(re.search(r'\d', s)):  # digit in s
-        try:
-            number =  int(s.split()[1])
-        except ValueError:
-            return 2
-        if number < 1:
-            return 2
-    else:
-        return 2
-
-
-def enter_path() -> tuple:
+def enter_dir() -> tuple:
     save_path = ''
     while not path.isdir(path.dirname(save_path)):
         save_path = input('Enter directory: ')
@@ -283,6 +275,44 @@ def input_id() -> tuple:
     return cell_id, False
 
 
+def gen_password(length: int) -> str:
+    """Create a string of random letters, numbers and special characters."""
+    if length < 6: # length too min to create reliable password
+        characters = string.ascii_letters + string.digits + string.punctuation
+        password = ''.join(choice(characters) for _ in range(length))
+        return password
+    # 1/6 - punctuation, 2/6 - digits, 3/6 - letters
+    punc_amount = length // 6
+    dig_amount = length // 6 * 2
+    let_amount = length - punc_amount - dig_amount
+    to_build_from = [choice(string.punctuation) for _ in range(punc_amount)] + [choice(string.digits) for _ in range(dig_amount)] + [choice(string.ascii_letters) for _ in range(let_amount)]
+    password = ''
+    for _ in range(length):
+        l = choice(to_build_from)
+        password += l
+        to_build_from.remove(l)
+    return password
+
+
+def parse_int(s: str, is_password: bool=False) -> int:
+    """Get integer from end of a string."""
+    if bool(re.search(r'\d', s)):  # digit in s
+        try:
+            number =  int(s.split()[-1])
+        except Exception:
+            if is_password:
+                return 8
+            return 2
+        if number < 1:
+            if is_password:
+                return 8
+            return 2
+        return number
+    if is_password:
+        return 8
+    return 2
+
+
 def new_cell() -> DataCell:
     """Create a new data cell."""
     x = {}
@@ -290,6 +320,9 @@ def new_cell() -> DataCell:
     max_len = len(max(cell_content, key=len))
     for i in cell_content:
         x[i] = input(i.replace('_', ' ')+': '+' '*(max_len-len(i)))
+        if i == 'password' and x[i].startswith('\t'): # tab - generate password
+            n = parse_int(x[i], True)
+            x[i] = gen_password(n)
     x['id'] = database.gen_id()
     return DataCell(x)
 
@@ -324,22 +357,28 @@ def print_db(command: str, psize: int = 2) -> None:
             current_page += 1
             if number != len(database.data_cells):
                 n = input('...')
-                if input.lower() == 'x': # Cancel viewing DB
+                if n.lower() == 'x': # Cancel viewing DB
                     return
                 os.system('cls')
                 print(f'> {command}')
     print()
 
 
-def export_data(output_path: str) -> None:
+def export_data(output_dir: str) -> None:
     """Export data as excel file to directory user gives."""
-    pandas.read_json(path.join('data', 'database.json')).to_excel(path.join(output_path, 'passwords.xlsx'), header=[
-        'Resource', 'Link', 'Login', 'Email', 'Password', 'Other data', 'Codes', 'ID in database'], index=False)
+    index = 1
+    filename = 'passwords.xlsx'
+    while path.exists(path.join(output_dir, filename)): # find name that is not taken
+        filename = f'passwords ({index}).xlsx'
+        index += 1
+    pandas.read_json(path.join('data', 'database.json')).to_excel(path.join(output_dir, filename), header=['Resource', 'Link', 'Login', 'Email', 'Password', 'Other data', 'Codes', 'ID in database'], index=False)
+    print(f'Exported as {filename}!')
 
+# main() # DEBUG
 
 if __name__ == '__main__':
     try:
         main()
     except Exception as e:
-        print('Warning!')
+        print('A program error has occurred:')
         print(e)
