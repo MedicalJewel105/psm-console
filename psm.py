@@ -6,6 +6,7 @@ import re
 from cryptography.fernet import Fernet
 from random import choice
 import string
+from getpass import getpass
 
 
 def main() -> None:
@@ -15,12 +16,14 @@ def main() -> None:
     global KEY_PATH
     KEY_PATH = 'key.dat'
     global DB_PATH
-    DB_PATH = path.join('data', 'database.json')
+    DB_PATH = path.join('data', 'database.dat')
+    global DB_KEY_PATH
+    DB_KEY_PATH = path.join('data', 'key.dat')
     os.chdir(path.dirname(path.realpath(__file__)))
     check_for_data()
     log_in()
     global database
-    database = Database()
+    database = Database(db_path=DB_PATH, key_path=DB_KEY_PATH)
     database.load()
 
     command = ''
@@ -127,7 +130,7 @@ def help_function() -> None:
     print('Sometimes you can enter "x" to cancel.')
 
 
-def init() -> None:
+def initialize() -> None:
     """Create all files, setup password."""
     new = ''
     while new == '':
@@ -137,10 +140,9 @@ def init() -> None:
     save_password(new)
     # do not create new file if there is already one (might be with password)
     if not path.exists(DB_PATH):
-        if not path.exists('data'):
-            os.mkdir('data')
-        with open(DB_PATH, 'w') as db_file:
-            db_file.write('[]')
+        if not path.exists(path.dirname(DB_PATH)):
+            _ = Database(db_path=DB_PATH, key_path=DB_KEY_PATH)
+            _.initialize()
 
 
 def check_for_data() -> None:
@@ -148,9 +150,9 @@ def check_for_data() -> None:
     if path.exists(PF_PATH) and path.exists(KEY_PATH) and path.exists(DB_PATH):
         p = load_password()
         if not p:
-            init()
+            initialize()
     else:
-        init()
+        initialize()
 
 
 def load_password() -> str:
@@ -177,9 +179,11 @@ def save_password(x: str) -> None:
 def log_in() -> None:
     """Enter a password to open an app."""
     password = load_password()
-    input_password = input('Enter password: ')
-    while input_password != password:
-        input_password = input('Enter password: ')
+    input_password = getpass('Enter password: ')
+    while input_password not in [password, 'x', 'X']:
+        input_password = getpass('Enter password: ')
+    if input_password in ['x', 'X']:
+        exit()
 
 
 def change_password() -> None:
@@ -324,10 +328,13 @@ def new_cell() -> DataCell:
     cell_content = ['name', 'link', 'login', 'email', 'password', 'other_data', 'codes']
     max_len = len(max(cell_content, key=len))
     for i in cell_content:
-        x[i] = input(i.replace('_', ' ')+': '+' '*(max_len-len(i)))
+        to_show = f"{i.replace('_', ' ')}: {' '*(max_len-len(i))}"
+        x[i] = input(to_show)
         if i == 'password' and x[i].startswith('\t'): # tab - generate password
             n = parse_int(x[i], True)
-            x[i] = gen_password(n)
+            password = gen_password(n)
+            x[i] = password
+            print(f'\033[1;30m{to_show}{password}\033[0m')
     x['id'] = database.gen_id()
     return DataCell(x)
 
@@ -352,6 +359,10 @@ def print_cell(cell: DataCell, show_id: bool) -> None:
 
 def print_db(command: str, psize: int = 2) -> None:
     """Print database by parts."""
+    # TODO: show input: - switch to previous page.
+    if not database.data_cells:
+        print('Empty.')
+        return
     page_amount = len(database.data_cells) // psize + bool(len(database.data_cells) % psize)
     current_page = 1
     for number, cell in enumerate(database.data_cells, start=1):

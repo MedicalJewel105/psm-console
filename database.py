@@ -1,5 +1,6 @@
 import json
-from os import path
+from cryptography.fernet import Fernet
+from os import path, mkdir
 import difflib
 from copy import deepcopy
 
@@ -39,17 +40,39 @@ class DataCell:
 
 class Database:
     """Class that holds all DataCells."""
-    def __init__(self):
+    def __init__(self, db_path: str=path.join('data', 'database.dat'), key_path: str=path.join('data', 'key.dat')):
         self.data_cells = []
+        global DB_PATH
+        DB_PATH = db_path
+        global DB_KEY_PATH
+        DB_KEY_PATH = key_path
     
-    def load(self, path: str=path.join('data', 'database.json')):
+    def load(self):
         """Create list of DataCell objects loaded from JSON."""
-        with open(path, 'r') as data:
-            data_json = json.load(data)
+        with open(DB_KEY_PATH, 'r') as key_file:
+            key = key_file.readline()
+        cipher = Fernet(key)
+        with open(DB_PATH, 'rb') as data_file:
+            data_encoded =  data_file.readline()
+            data_s = cipher.decrypt(data_encoded).decode()
+        data_json = json.loads(data_s)
+        
         self.data_cells = [DataCell(i) for i in data_json]
         self.sort_cells()
     
-    def save(self, path: str=path.join('data', 'database.json')):
+    def initialize(self) -> None:
+        """Initialize database: create files & key."""
+        if not path.exists(path.dirname(DB_PATH)):
+            mkdir(path.dirname(DB_PATH))
+        key = Fernet.generate_key()
+        cipher = Fernet(key)
+        placeholder = cipher.encrypt(bytes('[]'.encode()))
+        with open(DB_KEY_PATH, 'wb') as key_file:
+            key_file.write(key)
+        with open(DB_PATH, 'wb') as data_file:
+            data_file.write(placeholder)
+
+    def save(self):
         """Save data to file."""
         list_of_dicts = []
         for i in self.data_cells: # convert data from class objects to dictionaries
@@ -65,8 +88,13 @@ class Database:
             }
             list_of_dicts.append(cell)
         
-        with open(path, 'w') as data:
-            json.dump(list_of_dicts, data, indent=4)
+        with open(DB_KEY_PATH, 'r') as key_file:
+            key = key_file.readline()
+        cipher = Fernet(key)
+        bytes_data = bytes(json.dumps(list_of_dicts).encode())
+        encrypted_data = cipher.encrypt(bytes_data)
+        with open(DB_PATH, 'wb') as data_file:
+            data_file.write(encrypted_data)
 
     def sort_cells(self) -> None:
         """Sort database by source names"""
