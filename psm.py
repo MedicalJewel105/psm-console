@@ -28,7 +28,6 @@ def main() -> None:
 
     command = ''
     os.system('cls')
-    os.system('cls')
     print(f'PSM version {PSM_VERSION}')
     while True:
         print('Commands: help, show [int], search [str] [float], new, edit, delete, export, chpassword, save, exit.')
@@ -90,7 +89,7 @@ def main() -> None:
         elif command == 'exit':
             break
         else:
-            print(f'No such command "{command}"')
+            print(f'No such command "{command}".')
             print()
 
     database.save()
@@ -102,6 +101,7 @@ def help_function() -> None:
     # show
     print('\033[31mshow\033[0m')
     print('Show database content. Usage: show [i: int], i - how many results to show at one time.')
+    print('You can type "b" to go to the previous page.')
     # search
     print('\033[31msearch\033[0m')
     print('Search in database by word. Usage: search [query: str] [i: float], query - what to search for, i - indicator of similarity.')
@@ -358,25 +358,33 @@ def print_cell(cell: DataCell, show_id: bool) -> None:
 
 
 def print_db(command: str, psize: int = 2) -> None:
-    """Print database by parts."""
-    # TODO: show input: - switch to previous page.
+    """Print database. psize cells on one page."""
     if not database.data_cells:
-        print('Empty.')
+        print('Database is empty.')
         return
     page_amount = len(database.data_cells) // psize + bool(len(database.data_cells) % psize)
-    current_page = 1
-    for number, cell in enumerate(database.data_cells, start=1):
-        print_cell(cell, True)
-        if number % psize == 0 or number == len(database.data_cells):
-            print(f'[{current_page}/{page_amount}]')
-        if number % psize == 0:
-            current_page += 1
-            if number != len(database.data_cells):
-                n = input('...')
-                if n.lower() == 'x': # Cancel viewing DB
-                    return
-                os.system('cls')
-                print(f'> {command}')
+    page = 0 # start from 0
+    while 0 <= page <= page_amount:
+        is_prev_page = False
+        if page == page_amount: # last page
+            cells = database.data_cells[page_amount*psize:] # these cells will be printed
+        else:
+            cells = database.data_cells[page*psize:(page+1)*psize]
+        for cell in cells:
+            print_cell(cell, True)
+
+        if page != page_amount:
+            print(f'[{page + 1}/{page_amount}]')
+            n = input('...')
+            if n.lower() == 'x': # cancel viewing DB
+                return
+            is_prev_page = bool(n.lower() == 'b')
+            os.system('cls')
+            print(f'> {command}')
+        if not is_prev_page:
+            page += 1
+        else: # previous page is selected
+            page -= 1
     print()
 
 
