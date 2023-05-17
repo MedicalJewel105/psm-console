@@ -1,12 +1,12 @@
 import os
 from os import path
-import pandas
 from database import Database, DataCell
 import re
 from cryptography.fernet import Fernet
 from random import choice
 import string
 from getpass import getpass
+import json
 
 
 def main() -> None:
@@ -24,19 +24,19 @@ def main() -> None:
     log_in()
     global database
     database = Database(db_path=DB_PATH, key_path=DB_KEY_PATH)
-    database.load()
+    database.load(None)
 
     command = ''
     os.system('cls')
     print(f'PSM version {PSM_VERSION}')
     while True:
-        print('Commands: help, show [int], search [str] [float], new, edit, delete, export, chpassword, save, exit.')
+        print()
+        print('Commands: help, show [int], search [str] [float], new, edit, delete, export, save, exit, admin.')
         command = input('> ').lower().strip()
         os.system('cls')
         print(f'> {command}')
         if command == 'help':
             help_function()
-            print()
         elif command.startswith('show'):
             number = parse_int(command)
             print_db(command, number)
@@ -46,7 +46,6 @@ def main() -> None:
             database.update(cell)
             database.save()
             print(f'Saved with ID {cell.id}!')
-            print()
         elif command == 'edit':
             print('Editing data cell.')
             cell_id, is_cancelled = input_id()
@@ -57,7 +56,6 @@ def main() -> None:
                 print('Saved!')
             else:
                 print('Cancelled.')
-            print()
         elif command == 'delete':
             print('Deleting data cell.')
             cell_id, is_cancelled = input_id()
@@ -66,31 +64,39 @@ def main() -> None:
                 print('Deleted!')
             else:
                 print('Cancelled.')
-            print()
         elif command == 'export':
             print('Exporting data.')
-            savedir, is_cancelled = enter_dir()
+            export_format, is_cancelled = choose_from(database.export_formats)
             if not is_cancelled:
-                export_data(savedir)
+                savedir, is_cancelled = enter_dir()
+                if not is_cancelled:
+                    database.export_db(savedir, export_format)
+                else:
+                    print('Cancelled.')
             else:
                 print('Cancelled.')
-            print()
         elif command.startswith('search'):
             search_db(command)
-            print()
-        elif command == 'chpassword':
-            change_password()
-            print('Password changed!')
-            print()
         elif command == 'save':
             database.save()
             print('Database saved!')
-            print()
         elif command == 'exit':
             break
+        elif command == 'admin':
+            print('Admin commands: chpassword, delete_data, 1.0.0_import')
+        elif command == 'chpassword':
+            change_password()
+        elif command == 'delete_data':
+            delete_data()
+        elif command == '1.0.0_import':
+            db_dir, is_cancelled = enter_dir(True)
+            if not is_cancelled:
+                import_db(db_dir, '1.0.0')
+                database.save()
+            else:
+                print('Cancelled.')
         else:
             print(f'No such command "{command}".')
-            print()
 
     database.save()
     save_password(load_password()) # update encryption
@@ -117,10 +123,8 @@ def help_function() -> None:
     print('Delete data cell (cell is defined by ID). Usage: delete.')
     # export
     print('\033[31mexport\033[0m')
-    print('Export database as .xlsx file to folder user gives. Usage: export.')
-    # chpassword
-    print('\033[31mchpassword\033[0m')
-    print('Change password to enter this app. Usage: chpassword.')
+    print('Export database as .xlsx or .json file to folder user gives. Usage: export.')
+    print('Note: .json will be 1.0.0 file format.')
     # save
     print('\033[31msave\033[0m')
     print('Save database. Usage: save.')
@@ -128,6 +132,19 @@ def help_function() -> None:
     print('\033[31mexit\033[0m')
     print('ALWAYS run this command when you want to exit an app, otherwise database won\'t be updated. Usage: exit.')
     print('Sometimes you can enter "x" to cancel.')
+    
+    # admin
+    print('\033[31madmin\033[0m')
+    print('Shows administration commands:')
+    # chpassword
+    print('\033[31mchpassword\033[0m')
+    print('Change password to enter this app. Usage: chpassword.')
+    # delete_data
+    print('\033[31mdelete_data\033[0m')
+    print('Delete database and all password. Usage: delete_data.')
+    # 1.0.0_import
+    print('\033[31m1.0.0_import\033[0m')
+    print('Allows to import .json database from 1.0.0 version of program. Usage: 1.0.0_import.')
 
 
 def initialize() -> None:
@@ -140,9 +157,8 @@ def initialize() -> None:
     save_password(new)
     # do not create new file if there is already one (might be with password)
     if not path.exists(DB_PATH):
-        if not path.exists(path.dirname(DB_PATH)):
-            _ = Database(db_path=DB_PATH, key_path=DB_KEY_PATH)
-            _.initialize()
+        _ = Database(db_path=DB_PATH, key_path=DB_KEY_PATH)
+        _.initialize()
 
 
 def check_for_data() -> None:
@@ -192,6 +208,7 @@ def change_password() -> None:
     password = load_password()
     p = input('Enter old password: ')
     if p != password:
+        print('Wrong password. Cancelled.')
         return
     new = input('Enter new password: ')
     if not new:
@@ -201,6 +218,27 @@ def change_password() -> None:
         print('Passwords don\'t match.')
         return
     save_password(new)
+    print('Password changed!')
+
+
+def delete_data() -> None:
+    """Delete database and key."""
+    print('Warning! Do you really want to delete all data?')
+    print('Enter "Yеs, I\'m sure"')
+    n = input()
+    if n != 'Yes, I\'m sure':
+        print('Cancelled.')
+        return
+    
+    os.remove(PF_PATH)
+    os.remove(KEY_PATH)
+    os.remove(DB_PATH)
+    os.remove(DB_KEY_PATH)
+    os.rmdir(os.path.dirname(DB_PATH))
+    print('Successfully deleted all data.')
+    print('Hit "Enter" to exit.')
+    input()
+    exit()
 
 
 def search_db(cmd: str) -> None:
@@ -229,15 +267,18 @@ def search_db(cmd: str) -> None:
         print_cell(cell, True)
 
 
-def enter_dir() -> tuple:
-    save_path = ''
-    while not path.isdir(path.dirname(save_path)):
-        save_path = input('Enter directory: ')
-        if save_path.lower() == 'x':
+def enter_dir(file_exists: bool=False) -> tuple:
+    """Enter directory. do_file_exist: is it obligatory that file exists. Returns: (dir, is_cancelled)"""
+    directory = ''
+    while not path.isdir(path.dirname(directory)):
+        directory = input('Enter directory: ')
+        if directory.lower() == 'x':
             return '', True
-        if not path.isdir(path.dirname(save_path)):
+        elif not path.isdir(path.dirname(directory)):
             print('Wrong directory!')
-    return save_path, False
+        if file_exists and not path.exists(directory):
+            print('Wrong directory!')
+    return directory, False
 
 
 def edit_cell(cell_id: int) -> DataCell:
@@ -365,6 +406,7 @@ def print_db(command: str, psize: int = 2) -> None:
     page_amount = len(database.data_cells) // psize + bool(len(database.data_cells) % psize)
     page = 0 # start from 0
     while 0 <= page <= page_amount:
+        print(f'{len(database.data_cells)} entries')
         is_prev_page = False
         if page == page_amount: # last page
             cells = database.data_cells[page_amount*psize:] # these cells will be printed
@@ -385,18 +427,38 @@ def print_db(command: str, psize: int = 2) -> None:
             page += 1
         else: # previous page is selected
             page -= 1
-    print()
 
 
-def export_data(output_dir: str) -> None:
-    """Export data as excel file to directory user gives."""
-    index = 1
-    filename = 'passwords.xlsx'
-    while path.exists(path.join(output_dir, filename)): # find name that is not taken
-        filename = f'passwords ({index}).xlsx'
-        index += 1
-    pandas.read_json(path.join('data', 'database.json')).to_excel(path.join(output_dir, filename), header=['Resource', 'Link', 'Login', 'Email', 'Password', 'Other data', 'Codes', 'ID in database'], index=False)
-    print(f'Exported as {filename}!')
+def import_db(db_path: str, version: str) -> None:
+    """Import database from previous versions of psm."""
+    versions = ['1.0.0']
+    if version not in versions:
+        print(f'Wrong version {version}')
+        return
+    if version == '1.0.0': # unencrypted .json database
+        try:
+            with open(db_path) as f:
+                data = json.load(f)
+        except json.decoder.JSONDecodeError:
+            print('Unable to load file.')
+            return
+        database.save()
+        db_json = database.get_json()
+        db_json.extend(data)
+        database.load(db_json)
+        print('Successfully imported DB v 1.0.0!')
+
+
+def choose_from(x: list, text: str='value') -> tuple:
+    """Choose value from a list. Retuns: (str, is_cancelled)"""
+    print(x)
+    val = ''
+    while val not in x:
+        val = input(f'Enter {text}: ')
+        if val.lower() == 'x':
+            return '', True
+    return val, False
+
 
 # main() # DEBUG
 

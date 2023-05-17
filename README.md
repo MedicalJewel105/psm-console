@@ -9,6 +9,13 @@ Make sure to install dependencies:
 
 # Launch
 
-```
-python <path>/psm.py
-```
+Run `python <path>/psm.py` (if you have repository downloaded).
+Launch psm.exe (if you downloaded release).
+
+# Help
+
+You can type `help`.
+
+# Compatibility
+
+v 1.0.1: database format changed, you can use `1.0.0_import` to solve this problem.

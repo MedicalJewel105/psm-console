@@ -3,6 +3,7 @@ from cryptography.fernet import Fernet
 from os import path, mkdir
 import difflib
 from copy import deepcopy
+import pandas as pd
 
 
 class DataCell:
@@ -46,9 +47,10 @@ class Database:
         DB_PATH = db_path
         global DB_KEY_PATH
         DB_KEY_PATH = key_path
+        self.export_formats = ['xlsx', 'json']
     
-    def load(self):
-        """Create list of DataCell objects loaded from JSON."""
+    def get_json(self) -> list:
+        """Get JSON dictionary of database."""
         with open(DB_KEY_PATH, 'r') as key_file:
             key = key_file.readline()
         cipher = Fernet(key)
@@ -56,6 +58,12 @@ class Database:
             data_encoded =  data_file.readline()
             data_s = cipher.decrypt(data_encoded).decode()
         data_json = json.loads(data_s)
+        return data_json
+
+    def load(self, data_json: None) -> None:
+        """Create list of DataCell objects loaded from JSON. DB can be loaded from custom JSON, data_json=my_dict."""
+        if data_json == None:
+            data_json = self.get_json()
         
         self.data_cells = [DataCell(i) for i in data_json]
         self.sort_cells()
@@ -72,7 +80,7 @@ class Database:
         with open(DB_PATH, 'wb') as data_file:
             data_file.write(placeholder)
 
-    def save(self):
+    def save(self) -> None:
         """Save data to file."""
         list_of_dicts = []
         for i in self.data_cells: # convert data from class objects to dictionaries
@@ -153,6 +161,28 @@ class Database:
             if (i.name.lower() or i.link.lower() or i.login.lower() or i.password.lower() or i.other_data.lower() or i.codes.lower()) in match_result:
                 result.append(i)
         return result
+
+    def export_db(self, output_dir: str, export_format: str='xlsx') -> None:
+        """Export database in a convenient format."""
+        if export_format not in self.export_formats:
+            print(f'Format {export_format} is not in available lists.')
+            return
+        data_json = self.get_json()
+        filename = 'database.' + export_format
+        index = 1
+        while path.exists(path.join(output_dir, filename)): # find name that is not already taken
+                filename = f'database ({index}).' + export_format
+                index += 1
+        if export_format == 'xlsx':
+            df = pd.DataFrame(data_json)
+            df.to_excel(path.join(output_dir, filename), header=['Resource', 'Link', 'Login', 'Email', 'Password', 'Other data', 'Codes', 'ID in database'], index=False)
+        
+        elif export_format == 'json':
+            with open(path.join(output_dir, filename), 'w') as f:
+                json.dump(data_json, f, indent=4)
+        
+        print(f'Exported as "{filename}"!')
+
 
 if __name__ == '__main__':
     print("The database library file cannot be started.")
