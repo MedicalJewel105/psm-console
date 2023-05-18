@@ -131,8 +131,6 @@ def help_function() -> None:
     # exit
     print('\033[31mexit\033[0m')
     print('ALWAYS run this command when you want to exit an app, otherwise database won\'t be updated. Usage: exit.')
-    print('Sometimes you can enter "x" to cancel.')
-    
     # admin
     print('\033[31madmin\033[0m')
     print('Shows administration commands:')
@@ -145,6 +143,9 @@ def help_function() -> None:
     # 1.0.0_import
     print('\033[31m1.0.0_import\033[0m')
     print('Allows to import .json database from 1.0.0 version of program. Usage: 1.0.0_import.')
+    # note
+    print()
+    print('Note: sometimes you can enter "x" to cancel.')
 
 
 def initialize() -> None:
