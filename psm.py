@@ -26,6 +26,8 @@ def main() -> None:
     database = Database(db_path=DB_PATH, key_path=DB_KEY_PATH)
     database.load(None)
 
+    # while True:
+        # search_db(input(':'))
     command = ''
     os.system('cls')
     print(f'PSM version {PSM_VERSION}')
@@ -38,7 +40,7 @@ def main() -> None:
         if command == 'help':
             help_function()
         elif command.startswith('show'):
-            number = parse_int(command)
+            number = parse_int(command, 2)
             print_db(command, number)
         elif command == 'new':
             print('Creating new data cell.')
@@ -76,7 +78,7 @@ def main() -> None:
             else:
                 print('Cancelled.')
         elif command.startswith('search'):
-            search_db(command)
+            search(command)
         elif command == 'save':
             database.save()
             print('Database saved!')
@@ -225,7 +227,7 @@ def change_password() -> None:
 def delete_data() -> None:
     """Delete database and key."""
     print('Warning! Do you really want to delete all data?')
-    print('Enter "Yеs, I\'m sure"')
+    print('Enter "Yеs, I\'m sure"') # I use Russian e to prevent user from copy-paste
     n = input()
     if n != 'Yes, I\'m sure':
         print('Cancelled.')
@@ -242,26 +244,27 @@ def delete_data() -> None:
     exit()
 
 
-def search_db(cmd: str) -> None:
+def search(cmd: str) -> None:
     """Search for something in database. Result will be printed."""
     cwords = cmd.split()
     if len(cwords) == 1:
-        print('Incorrect usage.')
+        print('Empty search query.')
         return
-    if len(cwords) > 2 and cwords[-1].isnumeric():  # search q ... 0.5
+    if len(cwords) > 2:
         query = ' '.join(cwords[1:-1])
-        i = float(cwords[-1])
-    elif len(cwords) > 2:  # search q ... q
+        try:
+            i = float(cwords[-1])
+        except ValueError:
+            i = 0.5
+        else:
+            if not (0.0 <= i <= 1.0):
+                print('Incorrect value of i (accuracy).')
+                return
+    elif len(cwords) == 2:  # search q ... q
         query = ' '.join(cwords[1:])
-        i = 0.8
-    else:  # search q
-        query = cwords[1]
-        i = 0.8
-    if i == 0:
-        print('Incorrect value of i.')
-        return
+        i = 0.5
 
-    print(f'Searching for {query}.')
+    print(f'Searching for "{query}" with {round(i*100, 1)}% accuracy.')
     search_results = database.search_db(query, i)
     print(f'Found {len(search_results)} matches.')
     for cell in search_results:
@@ -333,10 +336,10 @@ def gen_password(length: int) -> str:
         password = ''.join(choice(characters) for _ in range(length))
         return password
     # 1/6 - punctuation, 2/6 - digits, 3/6 - letters
-    punc_amount = length // 6
+    punctuation_amount = length // 6
     dig_amount = length // 6 * 2
-    let_amount = length - punc_amount - dig_amount
-    to_build_from = [choice(string.punctuation) for _ in range(punc_amount)] + [choice(string.digits) for _ in range(dig_amount)] + [choice(string.ascii_letters) for _ in range(let_amount)]
+    let_amount = length - punctuation_amount - dig_amount
+    to_build_from = [choice(string.punctuation) for _ in range(punctuation_amount)] + [choice(string.digits) for _ in range(dig_amount)] + [choice(string.ascii_letters) for _ in range(let_amount)]
     password = ''
     for _ in range(length):
         l = choice(to_build_from)
@@ -345,23 +348,17 @@ def gen_password(length: int) -> str:
     return password
 
 
-def parse_int(s: str, is_password: bool=False) -> int:
-    """Get integer from end of a string."""
+def parse_int(s: str, default_value: int) -> int:
+    """Get integer from end of a string. If number < 1 - returns default value."""
     if bool(re.search(r'\d', s)):  # digit in s
         try:
             number =  int(s.split()[-1])
         except Exception:
-            if is_password:
-                return 8
-            return 2
+            return default_value
         if number < 1:
-            if is_password:
-                return 8
-            return 2
+            return default_value
         return number
-    if is_password:
-        return 8
-    return 2
+    return default_value
 
 
 def new_cell() -> DataCell:
@@ -373,7 +370,7 @@ def new_cell() -> DataCell:
         to_show = f"{i.replace('_', ' ')}: {' '*(max_len-len(i))}"
         x[i] = input(to_show)
         if i == 'password' and x[i].startswith('\t'): # tab - generate password
-            n = parse_int(x[i], True)
+            n = parse_int(x[i], 8)
             password = gen_password(n)
             x[i] = password
             print(f'\033[1;30m{to_show}{password}\033[0m')
@@ -451,7 +448,7 @@ def import_db(db_path: str, version: str) -> None:
 
 
 def choose_from(x: list, text: str='value') -> tuple:
-    """Choose value from a list. Retuns: (str, is_cancelled)"""
+    """Choose value from a list. Returns: (str, is_cancelled)"""
     print(x)
     val = ''
     while val not in x:

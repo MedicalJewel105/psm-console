@@ -144,7 +144,7 @@ class Database:
             if i.id == id:
                 return i
     
-    def search_db(self, q: str, x: float=0.8) -> list:
+    def search_db(self, q: str, x: float=0.5) -> list:
         """Search DB for matching things. x - indicator of similarity. Returns list with DataCells."""
         result = []
         q = q.lower()
