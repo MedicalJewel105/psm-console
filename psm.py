@@ -10,7 +10,7 @@ import json
 
 
 def main() -> None:
-    PSM_VERSION = '1.0.1'
+    PSM_VERSION = '1.0.2'
     global PF_PATH
     PF_PATH = 'data.dat'
     global KEY_PATH
