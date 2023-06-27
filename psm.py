@@ -12,9 +12,9 @@ import json
 def main() -> None:
     PSM_VERSION = '1.0.2'
     global PF_PATH
-    PF_PATH = 'data.dat'
+    PF_PATH = 'data.dat' # password file
     global KEY_PATH
-    KEY_PATH = 'key.dat'
+    KEY_PATH = 'key.dat' # password encryption 
     global DB_PATH
     DB_PATH = path.join('data', 'database.dat')
     global DB_KEY_PATH
@@ -26,8 +26,6 @@ def main() -> None:
     database = Database(db_path=DB_PATH, key_path=DB_KEY_PATH)
     database.load(None)
 
-    # while True:
-        # search_db(input(':'))
     command = ''
     os.system('cls')
     print(f'PSM version {PSM_VERSION}')
@@ -101,7 +99,7 @@ def main() -> None:
             print(f'No such command "{command}".')
 
     database.save()
-    save_password(load_password()) # update encryption
+    save_password(load_password()) # updates encryption
 
 
 def help_function() -> None:
@@ -166,6 +164,8 @@ def initialize() -> None:
 
 def check_for_data() -> None:
     """Check if there are any passwords, if not - init()."""
+    if any([not path.exists(PF_PATH), not path.exists(KEY_PATH)]) and any([path.exists(DB_PATH), path.exists(DB_KEY_PATH)]):
+        exit() # don't load password - a weak proof from password deletion thing
     if path.exists(PF_PATH) and path.exists(KEY_PATH) and path.exists(DB_PATH):
         p = load_password()
         if not p:
