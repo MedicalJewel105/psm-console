@@ -152,13 +152,14 @@ class Database:
         names = [i.name.lower() for i in temp]
         links = [i.link.lower() for i in temp]
         logins = [i.login.lower() for i in temp]
+        emails = [i.email.lower() for i in temp]
         passwords = [i.password.lower() for i in temp]
         other_datas = [i.other_data.lower() for i in temp]
-        codes_paths = [i.codes.lower() for i in temp]
-        everything = names + links + logins + passwords + other_datas + codes_paths
+        codes = [i.codes.lower() for i in temp]
+        everything = names + links + logins + emails + passwords + other_datas + codes
         match_result = difflib.get_close_matches(q, everything, cutoff=x)
         for i in temp:
-            if (i.name.lower() or i.link.lower() or i.login.lower() or i.password.lower() or i.other_data.lower() or i.codes.lower()) in match_result:
+            if (i.name.lower() or i.link.lower() or i.login.lower() or i.email.lower() or i.password.lower() or i.other_data.lower() or i.codes.lower()) in match_result:
                 result.append(i)
         return result
 

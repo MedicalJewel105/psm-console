@@ -135,14 +135,14 @@ def help_function() -> None:
     print('\033[31madmin\033[0m')
     print('Shows administration commands:')
     # chpassword
-    print('\033[31mchpassword\033[0m')
-    print('Change password to enter this app. Usage: chpassword.')
+    print('  \033[31mchpassword\033[0m')
+    print('  Change password to enter this app. Usage: chpassword.')
     # delete_data
-    print('\033[31mdelete_data\033[0m')
-    print('Delete database and all password. Usage: delete_data.')
+    print('  \033[31mdelete_data\033[0m')
+    print('  Delete database and all password. Usage: delete_data.')
     # 1.0.0_import
-    print('\033[31m1.0.0_import\033[0m')
-    print('Allows to import .json database from 1.0.0 version of program. Usage: 1.0.0_import.')
+    print('  \033[31m1.0.0_import\033[0m')
+    print('  Allows to import .json database from 1.0.0 version of program. Usage: 1.0.0_import.')
     # note
     print()
     print('Note: sometimes you can enter "x" to cancel.')
@@ -466,3 +466,4 @@ if __name__ == '__main__':
     except Exception as e:
         print('A program error has occurred:')
         print(e)
+        input()
