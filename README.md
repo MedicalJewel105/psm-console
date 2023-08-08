@@ -1,6 +1,6 @@
 # PSM - Password Manager (console)
 
-Store your passwords in more convenient way. All passwords are stored on your device? you can export them as MS Excel table.
+Store your passwords in more convenient way. All passwords are stored on your device and you can export them as MS Excel table.
 You can download release or clone repository.
 
 # Installation

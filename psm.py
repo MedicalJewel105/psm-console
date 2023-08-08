@@ -3,7 +3,7 @@ from os import path
 from database import Database, DataCell
 import re
 from cryptography.fernet import Fernet
-from random import choice
+from random import choice, randint
 import string
 from getpass import getpass
 import json
@@ -114,7 +114,7 @@ def help_function() -> None:
     # new
     print('\033[31mnew\033[0m')
     print('Create new data cell with information. Usage: new.')
-    print('Note: you can press do "Tab <n: int>" when filling in password field. This will create a good password of n signs.')
+    print('Note: you can press do "Tab <n: int>" when filling in password field. This will create a good password of n signs. (Default length: 10.)')
     # edit
     print('\033[31medit\033[0m')
     print('Edit data cell (cell is defined by ID). Usage: edit.')
@@ -330,7 +330,7 @@ def input_id() -> tuple:
 
 
 def gen_password(length: int) -> str:
-    """Create a string of random letters, numbers and special characters."""
+    """Create a string of random letters (uppercase and lowercase), numbers and special characters."""
     if length < 6: # length too min to create reliable password
         characters = string.ascii_letters + string.digits + string.punctuation
         password = ''.join(choice(characters) for _ in range(length))
@@ -339,7 +339,7 @@ def gen_password(length: int) -> str:
     punctuation_amount = length // 6
     dig_amount = length // 6 * 2
     let_amount = length - punctuation_amount - dig_amount
-    to_build_from = [choice(string.punctuation) for _ in range(punctuation_amount)] + [choice(string.digits) for _ in range(dig_amount)] + [choice(string.ascii_letters) for _ in range(let_amount)]
+    to_build_from = [choice(string.punctuation) for _ in range(punctuation_amount)] + [choice(string.digits) for _ in range(dig_amount)] + [choice(string.ascii_lowercase) for _ in range(let_amount//2)] + [choice(string.ascii_uppercase) for _ in range(let_amount - let_amount//2)]
     password = ''
     for _ in range(length):
         l = choice(to_build_from)
@@ -370,7 +370,7 @@ def new_cell() -> DataCell:
         to_show = f"{i.replace('_', ' ')}: {' '*(max_len-len(i))}"
         x[i] = input(to_show)
         if i == 'password' and x[i].startswith('\t'): # tab - generate password
-            n = parse_int(x[i], 8)
+            n = parse_int(x[i], 10)
             password = gen_password(n)
             x[i] = password
             print(f'\033[1;30m{to_show}{password}\033[0m')
